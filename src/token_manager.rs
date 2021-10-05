@@ -2,7 +2,6 @@ use crate::error::LoginError;
 use crate::provider::Provider;
 use tokio::task::JoinHandle;
 
-#[derive(Debug)]
 pub struct TokenManager {
     providers: Vec<Box<dyn Provider>>,
 }
