@@ -1,21 +1,18 @@
-use crate::error::LoginError;
 use crate::provider::Provider;
 use tokio::task::JoinHandle;
 
-pub struct TokenManager {
-    providers: Vec<Box<dyn Provider>>,
-}
+pub struct TokenManager {}
 
 impl TokenManager {
-    pub async fn new(providers: Vec<Box<dyn Provider>>) -> Result<TokenManager, LoginError> {
-        Ok(TokenManager { providers })
+    pub fn new() -> TokenManager {
+        TokenManager {}
     }
 
-    pub async fn start(self) {
-        let mut workers: Vec<JoinHandle<()>> = Vec::with_capacity(self.providers.len());
+    pub async fn start(self, providers: Vec<Box<dyn Provider>>) {
+        let mut workers: Vec<JoinHandle<()>> = Vec::with_capacity(providers.len());
 
-        for provider in self.providers {
-            workers.push(tokio::spawn(async move { provider.run().await }))
+        for provider in providers {
+            workers.push(tokio::spawn(async move { provider.run().await }));
         }
 
         futures::future::join_all(workers).await;
