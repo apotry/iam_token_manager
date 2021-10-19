@@ -1,5 +1,8 @@
+use crate::cache::Cache;
 use crate::provider::Provider;
+use crate::token::Token;
 use async_trait::async_trait;
+use jsonwebtoken::dangerous_insecure_decode;
 use reqwest::header::{ACCEPT, CONTENT_TYPE};
 use reqwest::Client;
 use reqwest::StatusCode;
@@ -14,8 +17,6 @@ const IBM_NAME: &str = "IBM";
 const IBM_TEST_NAME: &str = "IBM Test";
 const IAM_URL: &str = "https://iam.cloud.ibm.com";
 const IAM_TEST_URL: &str = "https://iam.test.cloud.ibm.com";
-
-type Db = Arc<Mutex<HashMap<String, IdentityTokenResponse>>>;
 
 #[derive(Debug, Clone)]
 pub struct IBM {
@@ -39,6 +40,16 @@ pub struct IdentityTokenResponse {
     expires_in: Option<u64>,
     expiration: Option<u64>,
     scope: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct Claims {
+    account: ClaimsAccount,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct ClaimsAccount {
+    bss: String,
 }
 
 pub fn new_provider(api_keys: Vec<String>) -> IBM {
@@ -81,24 +92,20 @@ impl Provider for IBM {
         return self.api_keys.clone();
     }
 
-    async fn run(self: Box<Self>) {
+    async fn run(self: Box<Self>, cache: Arc<Mutex<Cache>>) {
         let mut workers: Vec<JoinHandle<()>> = Vec::with_capacity(self.api_keys().len());
 
-        let db = Arc::new(Mutex::new(HashMap::<String, IdentityTokenResponse>::new()));
-
         for api_key in self.api_keys() {
-            let db = db.clone();
             let url = self.url.clone();
             let client = self.client.clone();
+            let cache = cache.clone();
 
             workers.push(tokio::spawn(async move {
                 loop {
-                    refresh_api_key(&api_key, &db, &url, &client).await;
-                    println!("{:?}", db);
+                    refresh_api_key(&api_key, cache.clone(), &url, &client).await;
 
                     sleep(Duration::from_secs(10)).await;
                 }
-                //println!("{}", name);
             }))
         }
 
@@ -106,7 +113,12 @@ impl Provider for IBM {
     }
 }
 
-async fn refresh_api_key(api_key: &String, db: &Db, url: &String, client: &Client) {
+async fn refresh_api_key(
+    api_key: &String,
+    cache: Arc<Mutex<Cache>>,
+    url: &String,
+    client: &Client,
+) {
     let full_url = format!(
         "{}/identity/token?apikey={}&grant_type=urn:ibm:params:oauth:grant-type:apikey&response_type=cloud_iam",
         url, api_key
@@ -124,13 +136,39 @@ async fn refresh_api_key(api_key: &String, db: &Db, url: &String, client: &Clien
                 let response_text = response.text().await.unwrap();
                 let i: IdentityTokenResponse = serde_json::from_str(&response_text).unwrap();
 
-                let mut db = db.lock().unwrap();
-                db.insert(api_key.to_string(), i);
-
-                println!("{:?}", response_text);
+                match i.access_token {
+                    Some(access_token) => match i.refresh_token {
+                        Some(refresh_token) => {
+                            match dangerous_insecure_decode::<Claims>(&access_token) {
+                                Ok(decoded) => {
+                                    let token = Token::new(
+                                        decoded.claims.account.bss,
+                                        access_token,
+                                        refresh_token,
+                                    );
+                                    cache.lock().unwrap().store(token);
+                                }
+                                Err(e) => {
+                                    warn!("error decoding JWT token: {}", e);
+                                }
+                            }
+                        }
+                        None => {
+                            warn!(
+                                "unable to find refresh_token in response: {:?}",
+                                response_text
+                            )
+                        }
+                    },
+                    None => {
+                        warn!(
+                            "unable to find access_token in response: {:?}",
+                            response_text
+                        )
+                    }
+                }
             }
             status_other => {
-                let _response_text = response.text().await.unwrap();
                 warn!("unexpected status code {}", status_other);
             }
         },

@@ -1,4 +1,6 @@
+use crate::cache::Cache;
 use async_trait::async_trait;
+use std::sync::{Arc, Mutex};
 
 #[async_trait]
 pub trait Provider: Sync + Send {
@@ -6,5 +8,5 @@ pub trait Provider: Sync + Send {
 
     fn name(&self) -> String;
 
-    async fn run(self: Box<Self>);
+    async fn run(self: Box<Self>, cache: Arc<Mutex<Cache>>);
 }
