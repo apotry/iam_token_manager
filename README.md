@@ -25,7 +25,9 @@ The binary has the following command line flags
 
 - `--ibm`: pass in an API key for `cloud.ibm.com` (can be passed multiple times)
 - `--ibm-test`: pass in an API key for `test.cloud.ibm.com` (can be passed multiple times)
-- `web.listen-port`: port for web server (optional)
+- `--web.listen-port`: port for web server (optional)
+- `--token-refresh-seconds`: how frequently a new access token for each API key is requested (optional, default=1800)
+
 
 At least one of `--ibm` or `--ibm-test` needs to be specified. If `web.listen-port` is 
 specified, a web server is started that exposes the following routes:

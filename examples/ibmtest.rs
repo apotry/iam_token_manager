@@ -1,7 +1,7 @@
 use clap::{crate_authors, App, Arg};
 use iam_token_manager::{Provider, TokenManager};
 use std::error::Error;
-use tracing::{error, warn};
+use tracing::{error, info, warn};
 use tracing_subscriber;
 
 #[tokio::main]
@@ -32,10 +32,34 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 .required(false)
                 .number_of_values(1),
         )
+        .arg(
+            Arg::with_name("token-refresh-seconds")
+                .long("token-refresh-seconds")
+                .default_value("1800"),
+        )
         .get_matches();
 
     let ibm_matches = matches.values_of("ibm");
     let ibm_test_matches = matches.values_of("ibm-test");
+    let token_refresh_seconds = matches.value_of("token-refresh-seconds").unwrap();
+
+    let parsed_refresh: u64;
+
+    match token_refresh_seconds.parse::<u64>() {
+        Ok(seconds) => {
+            info!("refreshing access tokens every {} seconds", seconds);
+
+            parsed_refresh = seconds
+        }
+        Err(e) => {
+            error!(
+                "--token-refresh-seconds value {} is not a valid u64: {}",
+                token_refresh_seconds, e
+            );
+
+            std::process::exit(1);
+        }
+    }
 
     if ibm_matches.is_none() && ibm_test_matches.is_none() {
         error!("either one of `--ibm` or `--ibm-test` needs to be supplied.");
@@ -83,7 +107,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         providers.push(Box::new(ibm_test));
     }
 
-    let token_manager = TokenManager::new(providers, listen_port);
+    let token_manager = TokenManager::new(providers, listen_port, parsed_refresh);
     token_manager.start().await;
 
     Ok(())

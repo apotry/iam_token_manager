@@ -9,13 +9,19 @@ use warp::Filter;
 pub struct TokenManager {
     providers: Vec<Box<dyn Provider>>,
     listen_port: u16,
+    token_refresh_seconds: u64,
 }
 
 impl TokenManager {
-    pub fn new(providers: Vec<Box<dyn Provider>>, listen_port: u16) -> TokenManager {
+    pub fn new(
+        providers: Vec<Box<dyn Provider>>,
+        listen_port: u16,
+        token_refresh_seconds: u64,
+    ) -> TokenManager {
         TokenManager {
             providers,
             listen_port,
+            token_refresh_seconds,
         }
     }
 
@@ -46,7 +52,10 @@ impl TokenManager {
 
         for provider in self.providers {
             let cache = provider_cache.clone();
-            workers.push(tokio::spawn(async move { provider.run(cache).await }));
+            let token_refresh_seconds = self.token_refresh_seconds;
+            workers.push(tokio::spawn(async move {
+                provider.run(cache, token_refresh_seconds).await
+            }));
         }
 
         futures::future::join_all(workers).await;
@@ -88,12 +97,12 @@ async fn get_token(
     match cache.get(id.clone()) {
         Some(token) => {
             result.insert("access_token".to_string(), token.access_token());
-            info!("GET token completed");
+            info!("GET token completed for ID: {}", id);
 
             Ok(warp::reply::json(&result))
         }
         None => {
-            warn!("GET token 404 - not found");
+            warn!("GET token 404 - not found for ID: {}", id);
 
             Err(warp::reject::not_found())
         }

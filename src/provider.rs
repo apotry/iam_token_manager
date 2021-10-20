@@ -8,5 +8,5 @@ pub trait Provider: Sync + Send {
 
     fn name(&self) -> String;
 
-    async fn run(self: Box<Self>, cache: Arc<Mutex<Cache>>);
+    async fn run(self: Box<Self>, cache: Arc<Mutex<Cache>>, token_refresh_seconds: u64);
 }
