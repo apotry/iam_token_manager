@@ -88,12 +88,12 @@ async fn get_token(
     match cache.get(id.clone()) {
         Some(token) => {
             result.insert("access_token".to_string(), token.access_token());
-            info!("GET token completed");
+            info!("GET token completed for ID: {}", id);
 
             Ok(warp::reply::json(&result))
         }
         None => {
-            warn!("GET token 404 - not found");
+            warn!("GET token 404 - not found for ID: {}", id);
 
             Err(warp::reject::not_found())
         }
