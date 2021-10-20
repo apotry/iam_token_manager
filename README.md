@@ -52,8 +52,10 @@ specified, a web server is started that exposes the following routes:
 
 #### Example (replace with real API keys):
 
+The environment variable `RUST_LOG` controls the logging output detail. Not setting this environment
+variable means that only errors will be logged:
+
 ```
-./target/debug/examples/ibmtest --ibm <key1> --ibm <key2> --ibm-test <key3> --web.listen.port=5050
+RUST_LOG=info ./target/debug/examples/ibmtest --ibm <key1> --ibm <key2> --ibm-test <key3> --web.listen.port=5050
 ```
 
-This starts 

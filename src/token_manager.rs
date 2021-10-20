@@ -3,7 +3,7 @@ use crate::provider::Provider;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use tokio::task::JoinHandle;
-use tracing::info;
+use tracing::{info, warn};
 use warp::Filter;
 
 pub struct TokenManager {
@@ -93,7 +93,7 @@ async fn get_token(
             Ok(warp::reply::json(&result))
         }
         None => {
-            info!("GET token 404 - not found");
+            warn!("GET token 404 - not found");
 
             Err(warp::reject::not_found())
         }

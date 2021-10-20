@@ -11,7 +11,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use tokio::task::JoinHandle;
 use tokio::time::{sleep, Duration};
-use tracing::warn;
+use tracing::error;
 
 const IBM_NAME: &str = "IBM";
 const IBM_TEST_NAME: &str = "IBM Test";
@@ -149,19 +149,19 @@ async fn refresh_api_key(
                                     cache.lock().unwrap().store(token);
                                 }
                                 Err(e) => {
-                                    warn!("error decoding JWT token: {}", e);
+                                    error!("error decoding JWT token: {}", e);
                                 }
                             }
                         }
                         None => {
-                            warn!(
+                            error!(
                                 "unable to find refresh_token in response: {:?}",
                                 response_text
                             )
                         }
                     },
                     None => {
-                        warn!(
+                        error!(
                             "unable to find access_token in response: {:?}",
                             response_text
                         )
@@ -169,11 +169,11 @@ async fn refresh_api_key(
                 }
             }
             status_other => {
-                warn!("unexpected status code {}", status_other);
+                error!("unexpected status code {}", status_other);
             }
         },
         Err(e) => {
-            println!("{}", e);
+            error!("{}", e);
         }
     }
 }
