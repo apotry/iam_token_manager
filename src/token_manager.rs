@@ -26,12 +26,15 @@ impl TokenManager {
         let cache_filter = warp::any().map(move || cache.clone());
 
         if self.listen_port > 0 {
-            let routes = warp::get()
-                .and(warp::path("v1"))
-                .and(warp::path("access_tokens"))
-                .and(warp::path::end())
+            let access_tokens_route = warp::path!("v1" / "access_tokens")
                 .and(cache_filter.clone())
                 .and_then(get_tokens);
+
+            let access_token_route = warp::path!("v1" / "access_tokens" / String)
+                .and(cache_filter.clone())
+                .and_then(get_token);
+
+            let routes = warp::get().and(access_tokens_route.or(access_token_route));
 
             let listen_port = self.listen_port.clone();
             tokio::spawn(
@@ -72,4 +75,27 @@ async fn get_tokens(cache: Arc<Mutex<Cache>>) -> Result<impl warp::Reply, warp::
     info!("GET tokens completed");
 
     Ok(warp::reply::json(&result))
+}
+
+async fn get_token(
+    id: String,
+    cache: Arc<Mutex<Cache>>,
+) -> Result<impl warp::Reply, warp::Rejection> {
+    let mut result = HashMap::<String, String>::new();
+
+    let cache = cache.lock().unwrap().clone();
+
+    match cache.get(id.clone()) {
+        Some(token) => {
+            result.insert("access_token".to_string(), token.access_token());
+            info!("GET token completed");
+
+            Ok(warp::reply::json(&result))
+        }
+        None => {
+            info!("GET token 404 - not found");
+
+            Err(warp::reject::not_found())
+        }
+    }
 }

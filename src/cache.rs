@@ -21,4 +21,11 @@ impl Cache {
     pub fn list(self) -> HashMap<String, Token> {
         self.store
     }
+
+    pub fn get(self, id: String) -> Option<Token> {
+        match self.store.get(&id) {
+            Some(value) => Some(value.to_owned()),
+            None => None,
+        }
+    }
 }
