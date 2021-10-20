@@ -11,7 +11,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use tokio::task::JoinHandle;
 use tokio::time::{sleep, Duration};
-use tracing::error;
+use tracing::{error, info};
 
 const IBM_NAME: &str = "IBM";
 const IBM_TEST_NAME: &str = "IBM Test";
@@ -92,7 +92,7 @@ impl Provider for IBM {
         return self.api_keys.clone();
     }
 
-    async fn run(self: Box<Self>, cache: Arc<Mutex<Cache>>) {
+    async fn run(self: Box<Self>, cache: Arc<Mutex<Cache>>, token_refresh_seconds: u64) {
         let mut workers: Vec<JoinHandle<()>> = Vec::with_capacity(self.api_keys().len());
 
         for api_key in self.api_keys() {
@@ -104,7 +104,7 @@ impl Provider for IBM {
                 loop {
                     refresh_api_key(&api_key, cache.clone(), &url, &client).await;
 
-                    sleep(Duration::from_secs(10)).await;
+                    sleep(Duration::from_secs(token_refresh_seconds)).await;
                 }
             }))
         }
@@ -146,7 +146,9 @@ async fn refresh_api_key(
                                         access_token,
                                         refresh_token,
                                     );
-                                    cache.lock().unwrap().store(token);
+                                    cache.lock().unwrap().store(&token);
+
+                                    info!("retrieved new access token for {}", &token.clone().id())
                                 }
                                 Err(e) => {
                                     error!("error decoding JWT token: {}", e);
