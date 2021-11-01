@@ -17,6 +17,7 @@ const IBM_NAME: &str = "IBM";
 const IBM_TEST_NAME: &str = "IBM Test";
 const IAM_URL: &str = "https://iam.cloud.ibm.com";
 const IAM_TEST_URL: &str = "https://iam.test.cloud.ibm.com";
+const RETRY_SECONDS: u64 = 5;
 
 #[derive(Debug, Clone)]
 pub struct IBM {
@@ -102,9 +103,15 @@ impl Provider for IBM {
 
             workers.push(tokio::spawn(async move {
                 loop {
-                    refresh_api_key(&api_key, cache.clone(), &url, &client).await;
-
-                    sleep(Duration::from_secs(token_refresh_seconds)).await;
+                    let refresh_seconds = refresh_api_key(
+                        &api_key,
+                        cache.clone(),
+                        &url,
+                        &client,
+                        token_refresh_seconds,
+                    )
+                    .await;
+                    sleep(Duration::from_secs(refresh_seconds)).await;
                 }
             }))
         }
@@ -118,7 +125,8 @@ async fn refresh_api_key(
     cache: Arc<Mutex<Cache>>,
     url: &String,
     client: &Client,
-) {
+    token_refresh_seconds: u64,
+) -> u64 {
     let full_url = format!(
         "{}/identity/token?apikey={}&grant_type=urn:ibm:params:oauth:grant-type:apikey&response_type=cloud_iam",
         url, api_key
@@ -148,10 +156,14 @@ async fn refresh_api_key(
                                     );
                                     cache.lock().unwrap().store(&token);
 
-                                    info!("retrieved new access token for {}", &token.clone().id())
+                                    info!("retrieved new access token for {}", &token.clone().id());
+
+                                    token_refresh_seconds
                                 }
                                 Err(e) => {
                                     error!("error decoding JWT token: {}", e);
+
+                                    RETRY_SECONDS
                                 }
                             }
                         }
@@ -159,23 +171,31 @@ async fn refresh_api_key(
                             error!(
                                 "unable to find refresh_token in response: {:?}",
                                 response_text
-                            )
+                            );
+
+                            RETRY_SECONDS
                         }
                     },
                     None => {
                         error!(
                             "unable to find access_token in response: {:?}",
                             response_text
-                        )
+                        );
+
+                        RETRY_SECONDS
                     }
                 }
             }
             status_other => {
                 error!("unexpected status code {}", status_other);
+
+                RETRY_SECONDS
             }
         },
         Err(e) => {
             error!("{}", e);
+
+            RETRY_SECONDS
         }
     }
 }
