@@ -2,6 +2,8 @@
 The IAM Token Manager manages IAM access tokens and refreshes them before they
 expire. Currently only IBM IAM tokens are supported.
 
+![demo](.github/iam.svg)
+
 ### Prerequisites
 Install the current stable release of Rust by using rustup. On Linux & OS X
 this can be done by running:
