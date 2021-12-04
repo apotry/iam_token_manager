@@ -110,7 +110,7 @@ impl Provider for IBM {
                         &client,
                         token_refresh_seconds,
                     )
-                    .await;
+                        .await;
                     sleep(Duration::from_secs(refresh_seconds)).await;
                 }
             }))
@@ -156,7 +156,7 @@ async fn refresh_api_key(
                                     );
                                     cache.lock().unwrap().store(&token);
 
-                                    info!("retrieved new access token for {}", &token.clone().id());
+                                    info!("retrieved new token for {}", &token.clone().id());
 
                                     token_refresh_seconds
                                 }
@@ -169,7 +169,7 @@ async fn refresh_api_key(
                         }
                         None => {
                             error!(
-                                "unable to find refresh_token in response: {:?}",
+                                "unable to find token in response: {:?}",
                                 response_text
                             );
 
@@ -178,7 +178,7 @@ async fn refresh_api_key(
                     },
                     None => {
                         error!(
-                            "unable to find access_token in response: {:?}",
+                            "unable to find token in response: {:?}",
                             response_text
                         );
 

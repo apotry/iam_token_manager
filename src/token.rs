@@ -2,7 +2,7 @@ use jsonwebtoken::dangerous_insecure_decode;
 use serde::{Deserialize, Serialize};
 use tracing::warn;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Token {
     id: String,
     access_token: String,
@@ -12,7 +12,8 @@ pub struct Token {
 #[derive(Debug, Serialize, Deserialize)]
 struct Claims {
     id: String,
-    iat: u64, // issued_at
+    iat: u64,
+    // issued_at
     exp: u64, // expiration time
 }
 
@@ -54,4 +55,6 @@ impl Token {
     pub fn access_token(self) -> String {
         self.access_token
     }
+
+    pub fn refresh_token(self) -> String { self.refresh_token }
 }
