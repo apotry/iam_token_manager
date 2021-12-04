@@ -2,6 +2,17 @@
 name = "iam_token_manager"
 version = "0.1.0"
 edition = "2018"
+authors = [
+	"Alexander P."
+]
+repository = "https://github.com/apotry/iam_token_manager"
+license = "Apache-2.0"
+readme = "README.md"
+keywords = [
+	"iam",
+	"token",
+	"cli"
+]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
