@@ -8,14 +8,14 @@ use tracing::{info, warn};
 use warp::Filter;
 
 pub struct TokenManager {
-    providers: Vec<Box<dyn Provider>>,
+    providers: &'static Vec<Box<dyn Provider>>,
     listen_port: u16,
     token_refresh_seconds: u64,
 }
 
 impl TokenManager {
     pub fn new(
-        providers: Vec<Box<dyn Provider>>,
+        providers: &'static Vec<Box<dyn Provider>>,
         listen_port: u16,
         token_refresh_seconds: u64,
     ) -> TokenManager {
