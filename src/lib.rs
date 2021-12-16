@@ -1,5 +1,4 @@
 pub mod cache;
-pub mod error;
 pub mod ibm;
 pub mod provider;
 pub mod token;

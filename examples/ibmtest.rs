@@ -107,7 +107,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
         providers.push(Box::new(ibm_test));
     }
 
-    let token_manager = TokenManager::new(providers, listen_port, parsed_refresh);
+    let prov_boxed = Box::new(providers);
+    let prov: &'static Vec<Box<dyn Provider>> = Box::leak(prov_boxed);
+
+    let token_manager = TokenManager::new(prov, listen_port, parsed_refresh);
     token_manager.start().await;
 
     Ok(())
